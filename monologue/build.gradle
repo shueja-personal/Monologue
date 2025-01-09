@@ -4,16 +4,13 @@ buildscript {
             url = 'https://frcmaven.wpi.edu/artifactory/ex-mvn'
         }
     }
-    dependencies {
-        classpath 'com.hubspot.jinjava:jinjava:2.7.1'
-    }
 }
 
 
 plugins {
     id "maven-publish"
     id "java-library"
-    id "edu.wpi.first.GradleRIO" version "2024.2.1"
+    id "edu.wpi.first.GradleRIO" version "2025.1.1"
     id 'com.diffplug.spotless' version '6.20.0'
 }
 
@@ -73,54 +70,6 @@ tasks.withType(JavaCompile) {
     options.compilerArgs.add '-XDstringConcat=inline'
 }
 
-import groovy.json.JsonSlurper;
-import com.hubspot.jinjava.Jinjava;
-import com.hubspot.jinjava.JinjavaConfig;
-
-def monologueTypesInputFile = file("src/generate/types.json")
-def monologueJavaTypesInputDir = file("src/generate/java")
-def monologueJavaTypesOutputDir = file("$buildDir/generated/main/java/monologue")
-
-task monologueGenerateClasses() {
-    description = "Generates Monologue Java classes"
-    group = "Monologue"
-
-    inputs.file monologueTypesInputFile
-    inputs.dir monologueJavaTypesInputDir
-    outputs.dir monologueJavaTypesOutputDir
-
-    doLast {
-        def jsonSlurper = new JsonSlurper()
-        def jsonTypes = jsonSlurper.parse(monologueTypesInputFile)
-
-        monologueJavaTypesOutputDir.deleteDir()
-        monologueJavaTypesOutputDir.mkdirs()
-
-        def builder = JinjavaConfig.newBuilder()
-        builder.withTrimBlocks(true)
-        builder.withLstripBlocks(true)
-        def config = builder.build()
-        def jinjava = new Jinjava(config)
-
-        monologueJavaTypesInputDir.listFiles().each { File file ->
-            def template = file.text
-            def outfn = file.name.substring(0, file.name.length() - 6)
-            if (file.name.startsWith("NTLogger")
-                    || file.name.startsWith("DataLogger")
-                    || file.name.startsWith("GenericLogger")
-                    || file.name.startsWith("Logged")
-                    || file.name.startsWith("GlobalLogged")) {
-                def replacements = new HashMap<String,?>()
-                replacements.put("types", jsonTypes)
-                def output = jinjava.render(template, replacements)
-                new File(monologueJavaTypesOutputDir, outfn).write(output)
-            }
-        }
-    }
-}
-
-sourceSets.main.java.srcDir "${buildDir}/generated/main/java"
-compileJava.dependsOn(monologueGenerateClasses)
 project.compileJava.dependsOn(spotlessApply)
 sourcesJar.dependsOn(compileJava)
 
